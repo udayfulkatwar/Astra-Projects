@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'" />
+    <title>Projects admin · ASTRA DWELL</title>
+    <link rel="icon" href="/assets/icon.svg?v=95fc3c7c4d" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/portal.css?v=95fc3c7c4d" />
+    <script type="module" src="/assets/admin.js?v=95fc3c7c4d"></script>
+  </head>
+  <body>
+    <main class="wrap stack">
+      <a class="brand" href="/" aria-label="ASTRA DWELL"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M4.5 27.5 16 4.5l11.5 23" stroke="currentColor" stroke-width="2.4" /><path d="M16 15.2 20.3 19.5 16 23.8 11.7 19.5Z" fill="currentColor" /></svg>ASTRA DWELL</a>
+      <p class="label">Private projects · Owner</p>
+      <h1>Share a project</h1>
+      <p id="status" class="toast" role="status" aria-live="polite"></p>
+      <input id="import-file" type="file" accept="application/json,.json" hidden />
+
+      <!-- First time on this device: create the owner key, or bring a backup in. -->
+      <section id="setup" class="card" hidden aria-labelledby="setup-title">
+        <h2 id="setup-title">Set up your owner key</h2>
+        <p>Choose a passphrase only you know. It locks the key that opens every project. Nobody, including ASTRA DWELL's developers, can recover it if it is lost, so write it down somewhere safe.</p>
+        <form id="setup-form" class="stack" novalidate>
+          <div class="grid2">
+            <label class="field" for="setup-pass">Passphrase (12+ characters)<input id="setup-pass" type="password" autocomplete="new-password" minlength="12" required /></label>
+            <label class="field" for="setup-pass2">Type it again<input id="setup-pass2" type="password" autocomplete="new-password" minlength="12" required /></label>
+          </div>
+          <div class="row"><button class="primary" type="submit">Create the owner key</button></div>
+        </form>
+        <p class="small">Already set up on another device? <label class="button" for="import-file">Import a key backup</label></p>
+      </section>
+
+      <!-- A device without the main owner key, before its copy is on the portal. -->
+      <section id="waiting" class="card" hidden aria-labelledby="waiting-title">
+        <h2 id="waiting-title">Open it on your laptop first</h2>
+        <p>The portal was set up on another device (your laptop). Open this page there once, unlock it with your passphrase (with the GitHub key saved), wait a minute, and reload here: then only the passphrase is needed on this device.</p>
+        <p class="small">No new setup is needed here, and none can be made: your laptop's key stays the main one.</p>
+        <div class="row"><button id="waiting-reload" class="primary" type="button">Reload</button><label class="button" for="import-file">Import a key backup</label></div>
+      </section>
+
+      <!-- Shown once after setup: the public key goes to whoever adds projects. -->
+      <section id="public" class="card" hidden aria-labelledby="public-title">
+        <h2 id="public-title">Your public key</h2>
+        <p>Send this to the person who adds projects to the portal. It can only lock projects for you, never open them, so it is safe to share. Also download the backup and keep it with your passphrase.</p>
+        <div id="public-key" class="output"></div>
+        <div class="row">
+          <button id="copy-public" type="button">Copy public key</button>
+          <button id="download-backup" type="button">Download key backup</button>
+          <button id="public-done" class="primary" type="button">Continue</button>
+        </div>
+      </section>
+
+      <section id="unlock" class="card" hidden aria-labelledby="unlock-title">
+        <h2 id="unlock-title">Unlock</h2>
+        <form id="unlock-form" class="stack" novalidate>
+          <p class="small">Use the passphrase you chose when you first set up the portal. It works the same on every device.</p>
+          <label class="field" for="unlock-pass">Passphrase<input id="unlock-pass" type="password" autocomplete="current-password" required /></label>
+          <div class="row"><button class="primary" type="submit">Unlock</button></div>
+        </form>
+      </section>
+
+      <section id="projects" hidden class="stack" aria-labelledby="projects-title">
+        <div class="row" style="justify-content: space-between">
+          <h2 id="projects-title">Projects</h2>
+          <div class="row">
+            <button id="show-public" type="button">Public key</button>
+            <button id="backup" type="button">Key backup</button>
+            <button id="lock" type="button">Lock</button>
+          </div>
+        </div>
+        <div id="gh-banner" class="card notice" hidden>
+          <p><strong>The GitHub key is not saved yet.</strong> Without it a link keeps working until its end time even if you delete its row, and your other devices cannot open this page with the passphrase alone. It takes about two minutes, once.</p>
+          <div class="row"><button id="gh-setup" class="primary" type="button">Set it up</button></div>
+        </div>
+        <ul id="project-list" class="projects"></ul>
+        <p id="no-projects" class="small" hidden>No project opens with this key. If you set up the portal on another device, open this page there once (with the GitHub key saved) and then reload here. Otherwise send your public key so the projects can be added.</p>
+
+        <form id="share-form" class="card" hidden novalidate aria-labelledby="share-title">
+          <h2 id="share-title">New link</h2>
+          <p id="share-project" class="label"></p>
+          <div class="grid2">
+            <label class="field" for="share-name">Client's name (shown on the preview)<input id="share-name" type="text" autocomplete="off" maxlength="60" required /></label>
+            <label class="field" for="share-days">Works for<select id="share-days"><option value="15">15 minutes</option><option value="60">1 hour</option><option value="240">4 hours</option><option value="1440" selected>1 day</option><option value="5760">4 days</option><option value="10080">7 days</option><option value="20160">14 days</option><option value="43200">30 days</option></select></label>
+          </div>
+          <label class="field" for="share-pass">Password<input id="share-pass" type="text" autocomplete="off" spellcheck="false" required /></label>
+          <div class="row">
+            <button id="new-pass" type="button">New password</button>
+            <button class="primary" type="submit">Create link</button>
+            <button id="share-cancel" type="button">Cancel</button>
+          </div>
+          <div id="share-result" class="stack" hidden>
+            <div class="output"><span class="label">Link</span><span id="out-link"></span></div>
+            <div class="output"><span class="label">Password</span><span id="out-pass"></span></div>
+            <p id="out-until" class="small"></p>
+            <div class="row">
+              <button id="copy-link" type="button">Copy link</button>
+              <button id="copy-pass" type="button">Copy password</button>
+              <button id="copy-message" class="primary" type="button">Copy message</button>
+            </div>
+            <p class="small">Tip: send the link and the password in separate messages.</p>
+          </div>
+        </form>
+
+        <section class="card" aria-labelledby="history-title">
+          <h2 id="history-title">Your links</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Client</th><th>Project</th><th>Valid until</th><th></th></tr></thead>
+              <tbody id="history"></tbody>
+            </table>
+          </div>
+          <p class="small">With the GitHub key saved, this list is the same on all your devices (stored locked with your owner key). <strong>Switch off</strong> stops a link for good, within a few minutes. <strong>Remove</strong> (for links that are already off or expired) only clears the row.</p>
+        </section>
+
+        <form id="off-form" class="card stack" novalidate aria-labelledby="off-title">
+          <h2 id="off-title">Switch off a link</h2>
+          <p class="small">For a link that is not in the list above (made on another device, or its row was removed): paste the link and its password.</p>
+          <label class="field" for="off-link">Link<input id="off-link" type="text" autocomplete="off" spellcheck="false" required /></label>
+          <label class="field" for="off-pass">Password<input id="off-pass" type="text" autocomplete="off" spellcheck="false" required /></label>
+          <div class="row"><button class="primary" type="submit">Switch off</button></div>
+        </form>
+
+        <form id="gh-form" class="card stack" novalidate aria-labelledby="gh-title">
+          <h2 id="gh-title">GitHub key for switching off</h2>
+          <p id="gh-state" class="small"></p>
+          <p class="small">Switching links off, and opening this page on your other devices with the passphrase alone, need a GitHub key, saved once on any one device. Make a fine-grained token and paste it here. It is stored locked with your owner key.</p>
+          <ol class="small">
+            <li><a href="https://github.com/settings/personal-access-tokens/new?name=Projects+portal+switch-off&amp;description=Switch+off+preview+links+on+projects.astragrp.net&amp;target_name=udayfulkatwar&amp;expires_in=366&amp;contents=write" target="_blank" rel="noopener noreferrer">Open GitHub's new-token page</a> (name, one-year expiry and <strong>Contents: Read and write</strong> are filled in).</li>
+            <li>Under <strong>Repository access</strong> choose <strong>Only select repositories</strong> → <strong>astra-projects</strong>.</li>
+            <li>Press <strong>Generate token</strong>, copy it, paste it below and press <strong>Save key</strong>.</li>
+          </ol>
+          <label class="field" for="gh-token">GitHub token<input id="gh-token" type="password" autocomplete="off" spellcheck="false" required /></label>
+          <div class="row"><button class="primary" type="submit">Save key</button><button id="gh-forget" type="button">Forget key</button></div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
